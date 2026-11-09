@@ -216,6 +216,12 @@ struct CollectionTaskCard: View {
         switch task.status {
         case .pending:
             return "等待中"
+        case .analyzing:
+            return "解析中..."
+        case .processing:
+            return "处理中..."
+        case .cancelled:
+            return "已取消"
         case .downloading:
             return "下载中 \(Int(task.progress * 100))%"
         case .muxing:

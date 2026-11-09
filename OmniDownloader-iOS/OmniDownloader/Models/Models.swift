@@ -35,6 +35,8 @@ public enum TaskStatus: String, Codable {
     case analyzing = "ANALYZING"
     case downloading = "DOWNLOADING"
     case processing = "PROCESSING"
+    case muxing = "MUXING"
+    case saving = "SAVING"
     case completed = "COMPLETED"
     case failed = "FAILED"
     case paused = "PAUSED"

@@ -173,6 +173,12 @@ struct TaskCard: View {
             return "\(task.selectedResolution) (无声)"
         case .audioOnly:
             return task.audioFormat.rawValue.uppercased()
+        case .gif:
+            return "GIF"
+        case .cover:
+            return strings.badgeCover
+        case .auto:
+            return task.selectedResolution
         }
     }
     
@@ -195,6 +201,12 @@ struct TaskCard: View {
         switch task.status {
         case .pending:
             return strings.statusPending
+        case .analyzing:
+            return strings.parsing
+        case .processing:
+            return strings.statusMuxing
+        case .cancelled:
+            return "已取消"
         case .downloading:
             let pct = Int(task.progress * 100)
             return "\(strings.statusDownloading) \(pct)%"

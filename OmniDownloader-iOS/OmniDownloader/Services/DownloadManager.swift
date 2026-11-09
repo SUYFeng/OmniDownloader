@@ -68,6 +68,59 @@ public class DownloadManager: NSObject, ObservableObject, URLSessionDownloadDele
     }
     
     // MARK: - 任务提交与控制
+
+    public func getDisplayItems(completed: Bool) -> [TaskDisplayItem] {
+        displayItems.compactMap { item in
+            switch item {
+            case .single(let task):
+                return (task.status == .completed) == completed ? item : nil
+            case .collection(let id, let title, let collectionTasks):
+                let allCompleted = collectionTasks.allSatisfy { $0.status == .completed }
+                return allCompleted == completed
+                    ? .collection(collectionId: id, collectionTitle: title, tasks: collectionTasks)
+                    : nil
+            }
+        }
+    }
+
+    public func addBatchTasks(_ newTasks: [DownloadTask]) {
+        addTasks(newTasks)
+    }
+
+    public func pauseTask(id: String) {
+        guard tasks.contains(where: { $0.id == id && $0.status == .downloading }) else { return }
+        session.getAllTasks { sessionTasks in
+            sessionTasks.filter { $0.taskDescription?.hasPrefix(id + "|") == true }.forEach { $0.suspend() }
+        }
+        updateTask(id: id) { $0.status = .paused }
+    }
+
+    public func resumeTask(id: String) {
+        session.getAllTasks { sessionTasks in
+            let matching = sessionTasks.filter { $0.taskDescription?.hasPrefix(id + "|") == true }
+            DispatchQueue.main.async {
+                if matching.isEmpty {
+                    self.retryTask(id: id)
+                } else {
+                    matching.forEach { $0.resume() }
+                    self.updateTask(id: id) { $0.status = .downloading }
+                }
+            }
+        }
+    }
+
+    public func pauseAll() {
+        for task in tasks where task.status == .downloading { pauseTask(id: task.id) }
+    }
+
+    public func resumeAll() {
+        for task in tasks where task.status == .paused { resumeTask(id: task.id) }
+    }
+
+    public func clearCompletedTasks() {
+        tasks.removeAll { $0.status == .completed }
+        saveTasks()
+    }
     
     /// 添加并启动下载任务
     public func addTask(_ task: DownloadTask) {
@@ -217,7 +270,7 @@ public class DownloadManager: NSObject, ObservableObject, URLSessionDownloadDele
         guard let taskId = parts.first.map(String.init) else { return }
         
         let fraction = totalBytesExpectedToWrite > 0 ? Float(totalBytesWritten) / Float(totalBytesExpectedToWrite) : 0.5
-        let progressPercent = fraction * 100
+        let progressPercent = min(max(fraction, 0), 1)
         
         updateTask(id: taskId) { t in
             t.progress = progressPercent
@@ -248,7 +301,7 @@ public class DownloadManager: NSObject, ObservableObject, URLSessionDownloadDele
             
             updateTask(id: taskId) { t in
                 t.status = .completed
-                t.progress = 100
+                t.progress = 1
                 t.localFilePath = finalUrl.path
             }
             
@@ -274,7 +327,7 @@ public class DownloadManager: NSObject, ObservableObject, URLSessionDownloadDele
                 
                 updateTask(id: taskId) { t in
                     t.status = .completed
-                    t.progress = 100
+                    t.progress = 1
                     t.localFilePath = finalUrl.path
                 }
                 if CookieStore.shared.autoSaveToAlbum {
@@ -300,7 +353,7 @@ public class DownloadManager: NSObject, ObservableObject, URLSessionDownloadDele
                         await MainActor.run {
                             self.updateTask(id: taskId) { t in
                                 t.status = .completed
-                                t.progress = 100
+                                t.progress = 1
                                 t.localFilePath = finalUrl.path
                             }
                         }

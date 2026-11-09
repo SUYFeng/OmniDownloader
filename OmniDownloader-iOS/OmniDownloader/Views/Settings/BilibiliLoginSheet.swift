@@ -65,7 +65,7 @@ struct BilibiliLoginSheet: View {
         // 当捕获到有效的 SESSDATA 时即认为登录成功
         if let sess = sessdata, !sess.isEmpty {
             let fullCookie = cookieStrings.joined(separator: "; ")
-            CookieStore.shared.saveBilibiliCookies(fullCookie: fullCookie, sessdata: sess)
+            CookieStore.shared.updateBilibiliCookie(fullCookie)
             DispatchQueue.main.async {
                 self.onLoginSuccess?()
                 self.presentationMode.wrappedValue.dismiss()

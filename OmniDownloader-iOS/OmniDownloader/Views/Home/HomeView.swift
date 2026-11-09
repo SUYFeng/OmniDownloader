@@ -166,7 +166,7 @@ struct HomeView: View {
                 TextEditor(text: $inputUrl)
                     .frame(minHeight: 90)
                     .font(.system(size: 15))
-                    .scrollContentBackground(.hidden)
+                    .omniHideScrollBackground()
                     .background(Color.clear)
             }
             .padding(8)
@@ -833,7 +833,7 @@ struct RelayWebViewRepresentable: UIViewRepresentable {
         }
 
         private func injectCatCatchSniffScript(_ webView: WKWebView) {
-            let js = """
+            let js = #"""
             (function() {
                 if (window.__omniCatCatchInjected) return;
                 window.__omniCatCatchInjected = true;
@@ -922,8 +922,19 @@ struct RelayWebViewRepresentable: UIViewRepresentable {
                     return count;
                 };
             })();
-            """
+            """#
             webView.evaluateJavaScript(js, completionHandler: nil)
+        }
+    }
+}
+
+private extension View {
+    @ViewBuilder
+    func omniHideScrollBackground() -> some View {
+        if #available(iOS 16.0, *) {
+            self.scrollContentBackground(.hidden)
+        } else {
+            self
         }
     }
 }
