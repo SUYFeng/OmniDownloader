@@ -1,0 +1,41 @@
+name: Build iOS IPA
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'OmniDownloader-iOS/**'
+      - '.github/workflows/ios-build.yml'
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: macos-15
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build unsigned iPhone app
+        working-directory: OmniDownloader-iOS
+        run: |
+          set -o pipefail
+          xcodebuild -version
+          xcodebuild build -project OmniDownloader.xcodeproj -scheme OmniDownloader -configuration Release -sdk iphoneos -destination 'generic/platform=iOS' -derivedDataPath build CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" 2>&1 | tee build.log
+      - name: Package IPA
+        working-directory: OmniDownloader-iOS
+        run: |
+          mkdir -p build/Payload
+          cp -R build/Build/Products/Release-iphoneos/OmniDownloader.app build/Payload/
+          cd build
+          /usr/bin/ditto -c -k --keepParent Payload OmniDownloader-unsigned.ipa
+          shasum -a 256 OmniDownloader-unsigned.ipa > SHA256SUMS.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: OmniDownloader-iOS-IPA
+          path: |
+            OmniDownloader-iOS/build/OmniDownloader-unsigned.ipa
+            OmniDownloader-iOS/build/SHA256SUMS.txt
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: build-log
+          path: OmniDownloader-iOS/build.log
