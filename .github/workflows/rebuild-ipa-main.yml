@@ -1,0 +1,30 @@
+name: Rebuild iOS IPA
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: macos-14
+    timeout-minutes: 50
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build ARM64 unsigned IPA (official command)
+        shell: bash
+        run: |
+          set -o pipefail
+          xcodebuild -version
+          xcodebuild build -project OmniDownloader-iOS/OmniDownloader.xcodeproj -scheme OmniDownloader -configuration Release -destination 'generic/platform=iOS' -derivedDataPath "$RUNNER_TEMP/ios-release" CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" | tee release.log
+          mkdir -p output/Payload
+          cp -R "$RUNNER_TEMP/ios-release/Build/Products/Release-iphoneos/OmniDownloader.app" output/Payload/
+          cd output && zip -qry OmniDownloader-1.7.21-unsigned.ipa Payload && rm -r Payload
+          shasum -a 256 OmniDownloader-1.7.21-unsigned.ipa > SHA256SUMS.txt
+          echo "IPA_BYTES=$(stat -f%z OmniDownloader-1.7.21-unsigned.ipa)"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: OmniDownloader-1.7.21-rebuilt-ipa
+          path: |
+            output/*
+            *.log
+          retention-days: 14
