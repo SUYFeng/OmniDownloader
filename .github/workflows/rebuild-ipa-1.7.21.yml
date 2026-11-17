@@ -1,11 +1,8 @@
 name: Rebuild OmniDownloader 1.7.21 IPA
-
 on:
   workflow_dispatch:
-
 permissions:
   contents: read
-
 jobs:
   build:
     runs-on: macos-15
